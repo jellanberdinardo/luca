@@ -1,1 +1,1 @@
-Carry system made by luca_doncicz,skertong,naijel_11,n4ijelzberdin
+loadstring(game:HttpGet("https://raw.githubusercontent.com/jellanberdinardo/luca/refs/heads/main/BARPA%20Hub%20Carry%20all%20player"))();
