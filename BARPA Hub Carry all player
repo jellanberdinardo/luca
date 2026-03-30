@@ -1,72 +1,72 @@
--- [[ BARPA HUB v8.5 - INSTANT SYNC ]]
+-- [[ BARPA HUB v8.6 - LOGIC & KICK FIX ]]
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local GroupService = game:GetService("GroupService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
--- [[ 1. THE KILL SWITCH (DOUBLE-CHECK SYSTEM) ]]
+-- [[ 1. CONFIGURATION ]]
 local GroupId = 35010872 
-local configURL = "https://raw.githubusercontent.com/jellanberdinardo/luca/main/config.json"
+-- Double cache buster to ensure GitHub updates instantly
+local cacheBuster = "?t=" .. os.time() .. "&r=" .. math.random(1,100000)
+local configURL = "https://raw.githubusercontent.com/jellanberdinardo/luca/main/config.json" .. cacheBuster
 
-local function getSettings()
-    -- Adding math.random AND os.time to stay ahead of the cache
-    local finalURL = configURL .. "?t=" .. os.time() .. "&r=" .. math.random(1,100000)
-    local success, res = pcall(function() return game:HttpGet(finalURL) end)
-    if success then
-        return HttpService:JSONDecode(res)
-    end
-    return nil
-end
-
+-- [[ 2. SECURITY CHECK ]]
 local function runSecurity()
-    local config = getSettings()
+    local success, result = pcall(function()
+        return HttpService:JSONDecode(game:HttpGet(configURL))
+    end)
     
-    if config then
-        -- If it says false, kick immediately
-        if config.IsActive == false or config.IsActive == "false" then
-            LocalPlayer:Kick("\n[BARPA HUB]\n" .. (config.Reason or "Disabled by Luca_doncicz."))
+    if success and result then
+        -- THE FIX: Only kick if IsActive is false
+        if result.IsActive == false or result.IsActive == "false" then
+            -- Use the reason from JSON, or a default message if reason is "System is active"
+            local kickMsg = result.Reason
+            if kickMsg == "System is active." then
+                kickMsg = "This script is currently disabled by Luca."
+            end
+            
+            LocalPlayer:Kick("\n[BARPA HUB]\n" .. kickMsg)
             return false
         end
     end
     
-    -- Group Check
+    -- Group Lock
     if not LocalPlayer:IsInGroup(GroupId) then
         pcall(function() GroupService:PromptJoinAsync(GroupId) end)
-        LocalPlayer:Kick("\n[BARPA HUB]\nJoin the group to use this script!")
+        LocalPlayer:Kick("\n[BARPA HUB]\nPlease join the group to use this script!")
         return false
     end
     
     return true
 end
 
--- Wait 1 second to let GitHub's cache breathe, then check
-task.wait(1) 
+-- Run security check before loading GUI
 if not runSecurity() then return end
 
--- [[ 2. THE GUI (Only loads if security passes) ]]
+-- [[ 3. THE GUI ]]
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-ScreenGui.Name = "BARPA_V8_5"
+ScreenGui.Name = "BARPA_V8_6"
 ScreenGui.ResetOnSpawn = false
 
 local Main = Instance.new("Frame", ScreenGui)
-Main.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 Main.Position = UDim2.new(0.5, -150, 0.4, 0)
 Main.Size = UDim2.new(0, 300, 0, 180)
 Main.Active = true
 Main.Draggable = true
-Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 12)
-Instance.new("UIStroke", Main).Color = Color3.fromRGB(0, 255, 255)
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
+Instance.new("UIStroke", Main).Color = Color3.fromRGB(0, 200, 200)
 
 local TopBar = Instance.new("Frame", Main)
 TopBar.Size = UDim2.new(1, 0, 0, 45)
-TopBar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 12)
+TopBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 10)
 
 local Title = Instance.new("TextLabel", TopBar)
 Title.Size = UDim2.new(1, 0, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
-Title.Text = "BARPA HUB <font color='#00FFFF'>v8.5</font>"
+Title.Text = "BARPA HUB <font color='#00FFFF'>v8.6</font>"
 Title.RichText = true
 Title.TextColor3 = Color3.new(1, 1, 1)
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -76,32 +76,30 @@ Title.BackgroundTransparency = 1
 
 local CarryBtn = Instance.new("TextButton", Main)
 CarryBtn.Position = UDim2.new(0, 15, 0, 65)
-CarryBtn.Size = UDim2.new(1, -30, 0, 55)
-CarryBtn.BackgroundColor3 = Color3.fromRGB(25, 30, 30)
+CarryBtn.Size = UDim2.new(1, -30, 0, 50)
+CarryBtn.BackgroundColor3 = Color3.fromRGB(30, 35, 35)
 CarryBtn.Text = "RAPID CARRY ALL"
 CarryBtn.TextColor3 = Color3.new(0, 1, 1)
 CarryBtn.Font = Enum.Font.GothamBold
-CarryBtn.TextSize = 15
+CarryBtn.TextSize = 14
 Instance.new("UICorner", CarryBtn).CornerRadius = UDim.new(0, 8)
 
--- [[ 3. RAPID LOGIC ]]
+-- [[ 4. RAPID LOGIC ]]
 CarryBtn.MouseButton1Click:Connect(function()
     local replic = ReplicatedStorage:FindFirstChild("CarryReplic")
     local remote = replic and replic.CarryRemotes:FindFirstChild("CarryRemote")
     local choice = replic and replic.CarryChoices:FindFirstChild("Piggyback")
 
     if remote and choice then
-        CarryBtn.Text = "CARRYING..."
+        CarryBtn.Text = "EXECUTING..."
         for _, p in pairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character then
                 task.spawn(function()
-                    pcall(function()
-                        remote:FireServer({
-                            ["cmd"] = "Carry",
-                            ["firstPlr"] = p,
-                            ["carrychoicesss"] = choice
-                        })
-                    end)
+                    remote:FireServer({
+                        ["cmd"] = "Carry",
+                        ["firstPlr"] = p,
+                        ["carrychoicesss"] = choice
+                    })
                 end)
             end
         end
