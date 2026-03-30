@@ -1,4 +1,4 @@
--- [[ BARPA HUB v8.6 - LOGIC & KICK FIX ]]
+-- [[ BARPA HUB v8.7 - CRASH-PROOF LOGIC ]]
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local GroupService = game:GetService("GroupService")
@@ -7,28 +7,33 @@ local LocalPlayer = Players.LocalPlayer
 
 -- [[ 1. CONFIGURATION ]]
 local GroupId = 35010872 
--- Double cache buster to ensure GitHub updates instantly
-local cacheBuster = "?t=" .. os.time() .. "&r=" .. math.random(1,100000)
-local configURL = "https://raw.githubusercontent.com/jellanberdinardo/luca/main/config.json" .. cacheBuster
+local configURL = "https://raw.githubusercontent.com/jellanberdinardo/luca/main/config.json?t=" .. os.time()
 
--- [[ 2. SECURITY CHECK ]]
+-- [[ 2. SMART SECURITY CHECK ]]
 local function runSecurity()
+    -- We use pcall to prevent the script from crashing if your JSON has a typo
     local success, result = pcall(function()
-        return HttpService:JSONDecode(game:HttpGet(configURL))
+        local data = game:HttpGet(configURL)
+        return HttpService:JSONDecode(data)
     end)
     
+    -- If the JSON is fixed and loaded correctly
     if success and result then
-        -- THE FIX: Only kick if IsActive is false
+        -- ONLY kick if IsActive is EXPLICITLY set to false
         if result.IsActive == false or result.IsActive == "false" then
-            -- Use the reason from JSON, or a default message if reason is "System is active"
-            local kickMsg = result.Reason
+            local kickMsg = result.Reason or "Disabled by Luca_doncicz."
+            -- If you forgot to change the reason while disabling, it shows this:
             if kickMsg == "System is active." then
-                kickMsg = "This script is currently disabled by Luca."
+                kickMsg = "Maintenance in progress."
             end
             
             LocalPlayer:Kick("\n[BARPA HUB]\n" .. kickMsg)
             return false
         end
+    else
+        -- If your JSON has an error (like an extra comma), it prints a warning 
+        -- but DOES NOT kick you anymore.
+        warn("[BARPA] JSON Error detected! Check your config.json for extra commas.")
     end
     
     -- Group Lock
@@ -41,12 +46,12 @@ local function runSecurity()
     return true
 end
 
--- Run security check before loading GUI
+-- Run security
 if not runSecurity() then return end
 
 -- [[ 3. THE GUI ]]
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-ScreenGui.Name = "BARPA_V8_6"
+ScreenGui.Name = "BARPA_V8_7"
 ScreenGui.ResetOnSpawn = false
 
 local Main = Instance.new("Frame", ScreenGui)
@@ -66,7 +71,7 @@ Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 10)
 local Title = Instance.new("TextLabel", TopBar)
 Title.Size = UDim2.new(1, 0, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
-Title.Text = "BARPA HUB <font color='#00FFFF'>v8.6</font>"
+Title.Text = "BARPA HUB <font color='#00FFFF'>v8.7</font>"
 Title.RichText = true
 Title.TextColor3 = Color3.new(1, 1, 1)
 Title.TextXAlignment = Enum.TextXAlignment.Left
