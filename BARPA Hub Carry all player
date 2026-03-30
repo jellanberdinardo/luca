@@ -1,30 +1,31 @@
--- [[ BARPA HUB v8.0 - SECURITY RESTORED ]]
+-- [[ BARPA HUB v8.1 - LOGIC FIX ]]
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local GroupService = game:GetService("GroupService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
--- [[ 1. THE KILL SWITCH & CONFIG ]]
+-- [[ 1. THE IMPROVED KILL SWITCH ]]
 local GroupId = 35010872 
 local cacheBuster = "?t=" .. os.time()
 local configURL = "https://raw.githubusercontent.com/jellanberdinardo/luca/main/config.json" .. cacheBuster
 
 local success, configRes = pcall(function() return game:HttpGet(configURL) end)
+
 if success then
     local config = HttpService:JSONDecode(configRes)
     
-    -- CHECK IF ACTIVE
-    if config.IsActive == false then
-        LocalPlayer:Kick("\n[BARPA HUB]\nThis script has been disabled by the creator.")
+    -- Debug: This will show you in F9 what the script sees
+    print("[BARPA] Config Loaded. IsActive is:", config.IsActive)
+
+    -- FIXED LOGIC: Checks if it's explicitly false or the string "false"
+    if config.IsActive == false or config.IsActive == "false" then
+        LocalPlayer:Kick("\n[BARPA HUB]\nDisabled by Luca_doncicz.")
         return 
     end
-    
-    -- CHECK BLACKLIST (In case you find a leaker)
-    if config.Blacklist and config.Blacklist[tostring(LocalPlayer.UserId)] then
-        LocalPlayer:Kick("\n[BARPA HUB]\nYou are blacklisted from using this script.")
-        return
-    end
+else
+    -- If GitHub fails to load, we let you in anyway so you aren't locked out
+    warn("[BARPA] Failed to load config from GitHub. Loading anyway...")
 end
 
 -- [[ 2. GROUP LOCK ]]
@@ -36,13 +37,13 @@ end
 
 -- [[ 3. THE GUI ]]
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-ScreenGui.Name = "BARPA_SECURE"
+ScreenGui.Name = "BARPA_FINAL"
 ScreenGui.ResetOnSpawn = false
 
 local Main = Instance.new("Frame", ScreenGui)
 Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 Main.Position = UDim2.new(0.5, -150, 0.4, 0)
-Main.Size = UDim2.new(0, 300, 0, 220)
+Main.Size = UDim2.new(0, 300, 0, 180) -- Slightly smaller/cleaner
 Main.Active = true
 Main.Draggable = true
 Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
@@ -54,7 +55,7 @@ Container.Position = UDim2.new(0, 10, 0, 45)
 Container.BackgroundTransparency = 1
 
 local Layout = Instance.new("UIListLayout", Container)
-Layout.Padding = UDim.new(0, 10)
+Layout.Padding = UDim.new(0, 8)
 Layout.SortOrder = Enum.SortOrder.LayoutOrder
 
 local TopBar = Instance.new("Frame", Main)
@@ -65,22 +66,13 @@ Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 10)
 local Title = Instance.new("TextLabel", TopBar)
 Title.Size = UDim2.new(1, 0, 1, 0)
 Title.Position = UDim2.new(0, 12, 0, 0)
-Title.Text = "BARPA HUB <font color='#00FFFF'>v8.0</font>"
+Title.Text = "BARPA HUB <font color='#00FFFF'>v8.1</font>"
 Title.RichText = true
 Title.TextColor3 = Color3.new(1, 1, 1)
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 14
 Title.BackgroundTransparency = 1
-
-local CreatorTag = Instance.new("TextLabel", Container)
-CreatorTag.Size = UDim2.new(1, 0, 0, 20)
-CreatorTag.Text = "Created by Luca_doncicz"
-CreatorTag.TextColor3 = Color3.fromRGB(150, 150, 150)
-CreatorTag.Font = Enum.Font.Gotham
-CreatorTag.TextSize = 12
-CreatorTag.BackgroundTransparency = 1
-CreatorTag.TextXAlignment = Enum.TextXAlignment.Left
 
 local CarryBtn = Instance.new("TextButton", Container)
 CarryBtn.Size = UDim2.new(1, 0, 0, 45)
