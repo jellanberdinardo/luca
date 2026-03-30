@@ -1,4 +1,4 @@
--- [[ BARPA HUB SECURITY SYSTEM v1.7 - FULL PROTECT ]]
+-- [[ BARPA HUB SECURITY SYSTEM v1.8 ]]
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local GroupService = game:GetService("GroupService")
@@ -10,63 +10,45 @@ local GroupId = 35010872
 local cacheBuster = "?t=" .. os.time()
 local configURL = "https://raw.githubusercontent.com/jellanberdinardo/luca/main/config.json" .. cacheBuster
 
--- 1. DISCORD LOGGING FUNCTION
-local function sendWebhook(status, detail)
-    local data = {
-        ["embeds"] = {{
-            ["title"] = "BARPA HUB SECURITY LOG",
-            ["description"] = "**User:** " .. LocalPlayer.Name .. " (" .. LocalPlayer.UserId .. ")\n**Status:** " .. status .. "\n**Details:** " .. (detail or "N/A") .. "\n**Game:** https://www.roblox.com/games/" .. game.PlaceId,
-            ["color"] = (status == "SUCCESS" and 65280 or 16711680), -- Green for Success, Red for Blocked
-            ["footer"] = { ["text"] = "Owner: Luca_doncicz" },
-            ["timestamp"] = DateTime.now():ToIsoDate()
-        }}
-    }
-    
-    -- Proxy to bypass Discord's Roblox block
-    local proxyURL = webhookURL:gsub("discord.com", "webhook.lewisakura.moe")
-    
-    pcall(function()
-        HttpService:PostAsync(proxyURL, HttpService:JSONEncode(data))
-    end)
-end
-
--- 2. KILL SWITCH CHECK (GitHub Config)
+-- 1. KILL SWITCH & GROUP CHECK (Security Gate)
 local successConfig, configRes = pcall(function() return game:HttpGet(configURL) end)
 if successConfig then
     local config = HttpService:JSONDecode(configRes)
     if config.IsActive == false then
-        local reason = config.Reason or "No reason provided."
-        sendWebhook("BLOCKED", "Global Kill Switch: " .. reason)
-        LocalPlayer:Kick("\n[BARPA HUB]\nThis script is currently DISABLED by Luca_doncicz.\n\nReason: " .. reason)
+        LocalPlayer:Kick("\n[BARPA HUB]\nDisabled by Luca_doncicz.")
         return 
     end
-else
-    warn("[BARPA]: Failed to verify security status.")
-    return
 end
 
--- 3. GROUP LOCK CHECK
 if not LocalPlayer:IsInGroup(GroupId) then
-    -- Show the Join Prompt
-    pcall(function()
-        GroupService:PromptJoinAsync(GroupId)
-    end)
-    
-    -- Log the attempt to Discord
-    sendWebhook("BLOCKED", "User not in Group. Prompted to join.")
-    
-    -- Kick the player
-    task.wait(0.5) -- Small delay so the prompt shows up
-    LocalPlayer:Kick("\n[BARPA HUB SECURITY]\nAccess Denied!\nYou must be a member of our group to use this script.\n\nJoin here: https://www.roblox.com/groups/" .. GroupId)
+    pcall(function() GroupService:PromptJoinAsync(GroupId) end)
+    LocalPlayer:Kick("\n[BARPA HUB]\nJoin the group to use this script!")
     return
 end
 
--- 4. SUCCESS - RUN MAIN SCRIPT
-sendWebhook("SUCCESS", "User verified and script executed.")
+-- 2. LOG SUCCESS
+local function logExec()
+    local proxyURL = webhookURL:gsub("discord.com", "webhook.lewisakura.moe")
+    pcall(function()
+        HttpService:PostAsync(proxyURL, HttpService:JSONEncode({
+            ["embeds"] = {{["title"] = "BARPA HUB LOADED", ["description"] = LocalPlayer.Name .. " is using the script!", ["color"] = 65280}}
+        }))
+    end)
+end
+logExec()
 
-print("------------------------------------------")
-print("BARPA HUB v1.7 LOADED | OWNER: Luca_doncicz")
-print("------------------------------------------")
+-- ==========================================
+-- [[ PASTE YOUR CARRY ALL GUI CODE BELOW ]]
+-- ==========================================
 
--- [[ YOUR MAIN SCRIPT LOGIC STARTS HERE ]]
-print("Executing Main Script for " .. LocalPlayer.Name .. "...")
+-- EXAMPLE (Delete this and paste YOUR actual GUI code here):
+local sg = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
+local frame = Instance.new("Frame", sg)
+frame.Size = UDim2.new(0, 200, 0, 100)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+local text = Instance.new("TextLabel", frame)
+text.Text = "BARPA HUB ACTIVE"
+text.Size = UDim2.new(1, 0, 1, 0)
+text.TextColor3 = Color3.new(1, 1, 1)
+
+-- ==========================================
