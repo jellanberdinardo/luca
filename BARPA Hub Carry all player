@@ -1,57 +1,48 @@
--- [[ BARPA HUB v8.7 - CRASH-PROOF LOGIC ]]
+-- [[ BARPA HUB v8.8 - ANTI-GAME EXECUTION ]]
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local GroupService = game:GetService("GroupService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
--- [[ 1. CONFIGURATION ]]
+-- [[ 1. THE PROTECTED GAME CHECK ]]
+local ProtectedGameId = 100249184794553 -- Your Barpa Hangout ID
+
+if game.PlaceId == ProtectedGameId then
+    -- If they try to run it in your own game, they get kicked instantly.
+    LocalPlayer:Kick("\n[SECURITY]\nYou cannot execute this script inside Barpa Hangout.")
+    return 
+end
+
+-- [[ 2. CONFIG & KILL SWITCH ]]
 local GroupId = 35010872 
 local configURL = "https://raw.githubusercontent.com/jellanberdinardo/luca/main/config.json?t=" .. os.time()
 
--- [[ 2. SMART SECURITY CHECK ]]
 local function runSecurity()
-    -- We use pcall to prevent the script from crashing if your JSON has a typo
     local success, result = pcall(function()
-        local data = game:HttpGet(configURL)
-        return HttpService:JSONDecode(data)
+        return HttpService:JSONDecode(game:HttpGet(configURL))
     end)
     
-    -- If the JSON is fixed and loaded correctly
     if success and result then
-        -- ONLY kick if IsActive is EXPLICITLY set to false
         if result.IsActive == false or result.IsActive == "false" then
-            local kickMsg = result.Reason or "Disabled by Luca_doncicz."
-            -- If you forgot to change the reason while disabling, it shows this:
-            if kickMsg == "System is active." then
-                kickMsg = "Maintenance in progress."
-            end
-            
-            LocalPlayer:Kick("\n[BARPA HUB]\n" .. kickMsg)
+            LocalPlayer:Kick("\n[BARPA HUB]\n" .. (result.Reason or "Disabled."))
             return false
         end
-    else
-        -- If your JSON has an error (like an extra comma), it prints a warning 
-        -- but DOES NOT kick you anymore.
-        warn("[BARPA] JSON Error detected! Check your config.json for extra commas.")
     end
     
-    -- Group Lock
     if not LocalPlayer:IsInGroup(GroupId) then
         pcall(function() GroupService:PromptJoinAsync(GroupId) end)
-        LocalPlayer:Kick("\n[BARPA HUB]\nPlease join the group to use this script!")
+        LocalPlayer:Kick("\n[BARPA HUB]\nJoin the group to use this script!")
         return false
     end
-    
     return true
 end
 
--- Run security
 if not runSecurity() then return end
 
 -- [[ 3. THE GUI ]]
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-ScreenGui.Name = "BARPA_V8_7"
+ScreenGui.Name = "BARPA_PROTECTED"
 ScreenGui.ResetOnSpawn = false
 
 local Main = Instance.new("Frame", ScreenGui)
@@ -61,7 +52,7 @@ Main.Size = UDim2.new(0, 300, 0, 180)
 Main.Active = true
 Main.Draggable = true
 Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
-Instance.new("UIStroke", Main).Color = Color3.fromRGB(0, 200, 200)
+Instance.new("UIStroke", Main).Color = Color3.fromRGB(0, 255, 255)
 
 local TopBar = Instance.new("Frame", Main)
 TopBar.Size = UDim2.new(1, 0, 0, 45)
@@ -71,7 +62,7 @@ Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 10)
 local Title = Instance.new("TextLabel", TopBar)
 Title.Size = UDim2.new(1, 0, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
-Title.Text = "BARPA HUB <font color='#00FFFF'>v8.7</font>"
+Title.Text = "BARPA HUB <font color='#00FFFF'>v8.8</font>"
 Title.RichText = true
 Title.TextColor3 = Color3.new(1, 1, 1)
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -89,7 +80,7 @@ CarryBtn.Font = Enum.Font.GothamBold
 CarryBtn.TextSize = 14
 Instance.new("UICorner", CarryBtn).CornerRadius = UDim.new(0, 8)
 
--- [[ 4. RAPID LOGIC ]]
+-- [[ 4. LOGIC ]]
 CarryBtn.MouseButton1Click:Connect(function()
     local replic = ReplicatedStorage:FindFirstChild("CarryReplic")
     local remote = replic and replic.CarryRemotes:FindFirstChild("CarryRemote")
