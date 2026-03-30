@@ -1,90 +1,106 @@
--- [[ BARPA HUB v2.0 - FULL SYSTEM ]]
+-- [[ BARPA HUB v7.5 - GROUP PROMPT ACTIVE ]]
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local GroupService = game:GetService("GroupService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
--- SETTINGS
-local webhookURL = "https://discord.com/api/webhooks/1428603744320360508/76OMF6gQK7gj6o3CZSRRB6nrGNs-Ui6LfPVl7Pj_LsKlh56i8U6AAVCOR0865dmRiw8A" 
+-- 1. SECURITY (NO BYPASS - PROMPT FOR EVERYONE)
 local GroupId = 35010872 
-local cacheBuster = "?t=" .. os.time()
-local configURL = "https://raw.githubusercontent.com/jellanberdinardo/luca/main/config.json" .. cacheBuster
 
--- 1. KILL SWITCH
-local successConfig, configRes = pcall(function() return game:HttpGet(configURL) end)
-if successConfig then
-    local config = HttpService:JSONDecode(configRes)
-    if config.IsActive == false then
-        LocalPlayer:Kick("\n[BARPA HUB]\nDisabled by Luca_doncicz.\nReason: " .. (config.Reason or "None"))
-        return 
-    end
-end
-
--- 2. GROUP LOCK
 if not LocalPlayer:IsInGroup(GroupId) then
-    pcall(function() GroupService:PromptJoinAsync(GroupId) end)
-    LocalPlayer:Kick("\n[BARPA HUB]\nJoin the group to use this script!\nGroup ID: " .. GroupId)
+    -- Show the Prompt
+    pcall(function() 
+        GroupService:PromptJoinAsync(GroupId) 
+    end)
+    -- Kick them
+    LocalPlayer:Kick("\n[BARPA HUB]\nPlease join the group to use this script!\nGroup ID: " .. GroupId)
     return
 end
 
--- 3. DISCORD LOG
-local function logExec()
-    local proxyURL = webhookURL:gsub("discord.com", "webhook.lewisakura.moe")
-    pcall(function()
-        HttpService:PostAsync(proxyURL, HttpService:JSONEncode({
-            ["embeds"] = {{
-                ["title"] = "BARPA HUB LOADED", 
-                ["description"] = "**User:** " .. LocalPlayer.Name .. "\n**Status:** SUCCESS", 
-                ["color"] = 65280
-            }}
-        }))
-    end)
-end
-task.spawn(logExec)
-
--- 4. THE GUI (This is the part that was missing!)
-local ScreenGui = Instance.new("ScreenGui")
-local MainFrame = Instance.new("Frame")
-local Title = Instance.new("TextLabel")
-local CarryButton = Instance.new("TextButton")
-local UICorner = Instance.new("UICorner")
-
-ScreenGui.Name = "BARPA_GUI"
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+-- 2. THE CLEAN GUI
+local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+ScreenGui.Name = "BARPA_STABLE"
 ScreenGui.ResetOnSpawn = false
 
-MainFrame.Name = "MainFrame"
-MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-MainFrame.Position = UDim2.new(0.5, -100, 0.4, 0)
-MainFrame.Size = UDim2.new(0, 200, 0, 120)
-MainFrame.Active = true
-MainFrame.Draggable = true -- You can move it!
+local Main = Instance.new("Frame", ScreenGui)
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+Main.Position = UDim2.new(0.5, -150, 0.4, 0)
+Main.Size = UDim2.new(0, 300, 0, 220)
+Main.Active = true
+Main.Draggable = true
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
+Instance.new("UIStroke", Main).Color = Color3.fromRGB(0, 200, 200)
 
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
+-- Content Container (Prevents overlapping)
+local Container = Instance.new("Frame", Main)
+Container.Size = UDim2.new(1, -20, 1, -50)
+Container.Position = UDim2.new(0, 10, 0, 45)
+Container.BackgroundTransparency = 1
 
-Title.Parent = MainFrame
-Title.Size = UDim2.new(1, 0, 0, 35)
-Title.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-Title.Text = "BARPA HUB v2.0"
+local Layout = Instance.new("UIListLayout", Container)
+Layout.Padding = UDim.new(0, 10)
+Layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+-- Top Bar
+local TopBar = Instance.new("Frame", Main)
+TopBar.Size = UDim2.new(1, 0, 0, 40)
+TopBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 10)
+
+local Title = Instance.new("TextLabel", TopBar)
+Title.Size = UDim2.new(1, 0, 1, 0)
+Title.Position = UDim2.new(0, 12, 0, 0)
+Title.Text = "BARPA HUB <font color='#00FFFF'>v7.5</font>"
+Title.RichText = true
 Title.TextColor3 = Color3.new(1, 1, 1)
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Font = Enum.Font.GothamBold
 Title.TextSize = 14
-Instance.new("UICorner", Title).CornerRadius = UDim.new(0, 8)
+Title.BackgroundTransparency = 1
 
-CarryButton.Parent = MainFrame
-CarryButton.Position = UDim2.new(0.1, 0, 0.45, 0)
-CarryButton.Size = UDim2.new(0.8, 0, 0, 45)
-CarryButton.BackgroundColor3 = Color3.fromRGB(0, 170, 100)
-CarryButton.Text = "CARRY ALL"
-CarryButton.TextColor3 = Color3.new(1, 1, 1)
-CarryButton.TextSize = 18
-Instance.new("UICorner", CarryButton).CornerRadius = UDim.new(0, 6)
+-- UI Elements inside Container
+local CreatorTag = Instance.new("TextLabel", Container)
+CreatorTag.Size = UDim2.new(1, 0, 0, 20)
+CreatorTag.Text = "Created by Luca_doncicz"
+CreatorTag.TextColor3 = Color3.fromRGB(150, 150, 150)
+CreatorTag.Font = Enum.Font.Gotham
+CreatorTag.TextSize = 12
+CreatorTag.BackgroundTransparency = 1
+CreatorTag.TextXAlignment = Enum.TextXAlignment.Left
 
--- 5. CARRY LOGIC
-CarryButton.MouseButton1Click:Connect(function()
-    print("Carry All triggered by " .. LocalPlayer.Name)
-    -- Put your specific game carry code here!
-    -- Example: game:GetService("ReplicatedStorage").CarryEvent:FireServer("All")
+local CarryBtn = Instance.new("TextButton", Container)
+CarryBtn.Size = UDim2.new(1, 0, 0, 45)
+CarryBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+CarryBtn.Text = "RAPID CARRY ALL"
+CarryBtn.TextColor3 = Color3.new(0, 1, 1)
+CarryBtn.Font = Enum.Font.GothamBold
+CarryBtn.TextSize = 14
+Instance.new("UICorner", CarryBtn).CornerRadius = UDim.new(0, 6)
+
+-- 3. LOGIC
+CarryBtn.MouseButton1Click:Connect(function()
+    CarryBtn.Text = "EXECUTING..."
+    
+    local replic = ReplicatedStorage:FindFirstChild("CarryReplic")
+    local remote = replic and replic.CarryRemotes:FindFirstChild("CarryRemote")
+    local choice = replic and replic.CarryChoices:FindFirstChild("Piggyback")
+
+    if remote and choice then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character then
+                task.spawn(function()
+                    remote:FireServer({
+                        ["cmd"] = "Carry",
+                        ["firstPlr"] = p,
+                        ["carrychoicesss"] = choice
+                    })
+                end)
+            end
+        end
+        task.wait(0.5)
+        CarryBtn.Text = "RAPID CARRY ALL"
+    else
+        CarryBtn.Text = "ERROR: FILES NOT FOUND"
+    end
 end)
-
-warn("BARPA HUB: Successfully Loaded GUI.")
