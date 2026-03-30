@@ -1,53 +1,63 @@
--- [[ BARPA HUB SECURITY SYSTEM v1.2 ]]
--- This script is hosted at: https://raw.githubusercontent.com/jellanberdinardo/luca/main/BARPA%20Hub%20Carry%20all%20player
-
+-- [[ BARPA HUB SECURITY SYSTEM v1.5 ]]
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
+local GroupService = game:GetService("GroupService")
 local LocalPlayer = Players.LocalPlayer
 
--- Use os.time() to bypass GitHub's 5-minute cache delay
+-- SETTINGS
+local webhookURL = "https://discord.com/api/webhooks/1428603744320360508/76OMF6gQK7gj6o3CZSRRB6nrGNs-Ui6LfPVl7Pj_LsKlh56i8U6AAVCOR0865dmRiw8A" -- <--- PASTE YOUR DISCORD WEBHOOK HERE
+local GroupId = 35010872 -- Your Group ID
 local cacheBuster = "?t=" .. os.time()
 local configURL = "https://raw.githubusercontent.com/jellanberdinardo/luca/main/config.json" .. cacheBuster
-local whitelistURL = "https://raw.githubusercontent.com/jellanberdinardo/luca/main/whitelist.json" .. cacheBuster
 
--- 1. KILL SWITCH CHECK
+-- 1. DISCORD LOGGING FUNCTION
+local function sendWebhook(status)
+    local data = {
+        ["embeds"] = {{
+            ["title"] = "BARPA HUB LOG",
+            ["description"] = "**User:** " .. LocalPlayer.Name .. " (" .. LocalPlayer.UserId .. ")\n**Status:** " .. status .. "\n**Game:** https://www.roblox.com/games/" .. game.PlaceId,
+            ["color"] = (status == "Executed" and 65280 or 16711680),
+            ["footer"] = { ["text"] = "Owner: Luca_doncicz" }
+        }}
+    }
+    local proxyURL = webhookURL:gsub("discord.com", "webhook.lewisakura.moe")
+    pcall(function()
+        HttpService:PostAsync(proxyURL, HttpService:JSONEncode(data))
+    end)
+end
+
+-- 2. KILL SWITCH CHECK
 local successConfig, configRes = pcall(function() return game:HttpGet(configURL) end)
 if successConfig then
     local config = HttpService:JSONDecode(configRes)
-    
     if config.IsActive == false then
         local reason = config.Reason or "No reason provided."
-        warn("------------------------------------------")
-        warn("[BARPA]: DISABLED BY LUCA_DONCICZ")
-        warn("REASON: " .. reason)
-        warn("------------------------------------------")
-        
-        -- Kicking the player is safer than just 'return'
-        LocalPlayer:Kick("\n[BARPA HUB]\nSystem Offline.\nReason: " .. reason)
+        sendWebhook("Blocked (Kill Switch)")
+        LocalPlayer:Kick("\n[BARPA HUB]\nDisabled by Luca_doncicz.\nReason: " .. reason)
         return 
     end
 else
-    warn("[BARPA]: Critical Error. Could not connect to Security Server.")
+    warn("[BARPA]: Security Error.")
     return
 end
 
--- 2. WHITELIST CHECK
-local successWL, wlRes = pcall(function() return game:HttpGet(whitelistURL) end)
-if successWL then
-    local whitelist = HttpService:JSONDecode(wlRes)
-    if not whitelist[tostring(LocalPlayer.UserId)] then
-        LocalPlayer:Kick("\n[BARPA HUB SECURITY]\nNot Whitelisted!\nYour ID: " .. LocalPlayer.UserId)
-        return
+-- 3. GROUP JOIN PROMPT (Only prompts if NOT in group)
+task.spawn(function()
+    task.wait(2) -- Wait a moment after loading so they aren't spammed instantly
+    if not LocalPlayer:IsInGroup(GroupId) then
+        print("[BARPA]: Prompting Group Join for " .. GroupId)
+        pcall(function()
+            GroupService:PromptJoinAsync(GroupId)
+        end)
     end
-else
-    warn("[BARPA]: Security Offline. Could not verify user.")
-    return
-end
+end)
 
--- 3. SUCCESS NOTIFICATION
+-- 4. LOG SUCCESS & LOAD
+sendWebhook("Executed")
+
 print("------------------------------------------")
-print("BARPA HUB v1.2 LOADED | OWNER: Luca_doncicz")
+print("BARPA HUB v1.5 LOADED | OWNER: Luca_doncicz")
 print("------------------------------------------")
 
--- [[ YOUR MAIN CARRY ALL LOGIC GOES BELOW THIS LINE ]]
-print("Executing Main Script...")
+-- [[ MAIN LOGIC BELOW ]]
+print("Welcome, " .. LocalPlayer.Name .. "! Main script running...")
