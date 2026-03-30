@@ -1,105 +1,161 @@
--- [[ BARPA HUB v8.8 - ANTI-GAME EXECUTION ]]
+--// BARPA HUB v8.8 (Improved Security)
+
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local GroupService = game:GetService("GroupService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local LocalPlayer = Players.LocalPlayer
 
--- [[ 1. THE PROTECTED GAME CHECK ]]
-local ProtectedGameId = 100249184794553 -- Your Barpa Hangout ID
+--// 1. PROTECTED GAME CHECK
+local PROTECTED_PLACE_ID = 100249184794553
 
-if game.PlaceId == ProtectedGameId then
-    -- If they try to run it in your own game, they get kicked instantly.
-    LocalPlayer:Kick("\n[SECURITY]\nYou cannot execute this script inside Barpa Hangout.")
-    return 
+if game.PlaceId == PROTECTED_PLACE_ID then
+    LocalPlayer:Kick("\n[SECURITY]\nExecution inside Barpa Hangout is not allowed.")
+    return
 end
 
--- [[ 2. CONFIG & KILL SWITCH ]]
-local GroupId = 35010872 
-local configURL = "https://raw.githubusercontent.com/jellanberdinardo/luca/main/config.json?t=" .. os.time()
+--// 2. CONFIG
+local GROUP_ID = 35010872
+local CONFIG_URL = "https://raw.githubusercontent.com/jellanberdinardo/luca/main/config.json?cache=" .. math.random(100000,999999)
+
+--// 3. SECURITY FUNCTION
+local function fetchConfig()
+    local success, response = pcall(function()
+        return game:HttpGet(CONFIG_URL)
+    end)
+
+    if not success then
+        warn("[BARPA HUB] Failed to fetch config")
+        return nil
+    end
+
+    local ok, data = pcall(function()
+        return HttpService:JSONDecode(response)
+    end)
+
+    if not ok then
+        warn("[BARPA HUB] Invalid JSON config")
+        return nil
+    end
+
+    return data
+end
 
 local function runSecurity()
-    local success, result = pcall(function()
-        return HttpService:JSONDecode(game:HttpGet(configURL))
-    end)
-    
-    if success and result then
-        if result.IsActive == false or result.IsActive == "false" then
-            LocalPlayer:Kick("\n[BARPA HUB]\n" .. (result.Reason or "Disabled."))
+    local config = fetchConfig()
+
+    -- Kill switch
+    if config then
+        if not config.IsActive then
+            LocalPlayer:Kick("\n[BARPA HUB]\n" .. (config.Reason or "Script Disabled"))
             return false
         end
+    else
+        -- Optional: fail-safe (block if config fails)
+        LocalPlayer:Kick("\n[BARPA HUB]\nConfig fetch failed.")
+        return false
     end
-    
-    if not LocalPlayer:IsInGroup(GroupId) then
-        pcall(function() GroupService:PromptJoinAsync(GroupId) end)
+
+    -- Group check
+    if not LocalPlayer:IsInGroup(GROUP_ID) then
+        pcall(function()
+            GroupService:PromptJoinAsync(GROUP_ID)
+        end)
+
         LocalPlayer:Kick("\n[BARPA HUB]\nJoin the group to use this script!")
         return false
     end
+
     return true
 end
 
 if not runSecurity() then return end
 
--- [[ 3. THE GUI ]]
-local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+--// 4. GUI
+local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "BARPA_PROTECTED"
 ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
-local Main = Instance.new("Frame", ScreenGui)
-Main.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-Main.Position = UDim2.new(0.5, -150, 0.4, 0)
+local Main = Instance.new("Frame")
+Main.Parent = ScreenGui
 Main.Size = UDim2.new(0, 300, 0, 180)
+Main.Position = UDim2.new(0.5, -150, 0.4, 0)
+Main.BackgroundColor3 = Color3.fromRGB(15,15,15)
 Main.Active = true
 Main.Draggable = true
-Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
-Instance.new("UIStroke", Main).Color = Color3.fromRGB(0, 255, 255)
 
-local TopBar = Instance.new("Frame", Main)
-TopBar.Size = UDim2.new(1, 0, 0, 45)
-TopBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0,10)
+Instance.new("UIStroke", Main).Color = Color3.fromRGB(0,255,255)
 
-local Title = Instance.new("TextLabel", TopBar)
-Title.Size = UDim2.new(1, 0, 1, 0)
-Title.Position = UDim2.new(0, 15, 0, 0)
+local TopBar = Instance.new("Frame")
+TopBar.Parent = Main
+TopBar.Size = UDim2.new(1,0,0,45)
+TopBar.BackgroundColor3 = Color3.fromRGB(25,25,25)
+Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0,10)
+
+local Title = Instance.new("TextLabel")
+Title.Parent = TopBar
+Title.Size = UDim2.new(1,0,1,0)
+Title.Position = UDim2.new(0,15,0,0)
+Title.BackgroundTransparency = 1
 Title.Text = "BARPA HUB <font color='#00FFFF'>v8.8</font>"
 Title.RichText = true
-Title.TextColor3 = Color3.new(1, 1, 1)
-Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.TextColor3 = Color3.new(1,1,1)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 14
-Title.BackgroundTransparency = 1
+Title.TextXAlignment = Enum.TextXAlignment.Left
 
-local CarryBtn = Instance.new("TextButton", Main)
-CarryBtn.Position = UDim2.new(0, 15, 0, 65)
-CarryBtn.Size = UDim2.new(1, -30, 0, 50)
-CarryBtn.BackgroundColor3 = Color3.fromRGB(30, 35, 35)
+local CarryBtn = Instance.new("TextButton")
+CarryBtn.Parent = Main
+CarryBtn.Size = UDim2.new(1,-30,0,50)
+CarryBtn.Position = UDim2.new(0,15,0,65)
+CarryBtn.BackgroundColor3 = Color3.fromRGB(30,35,35)
 CarryBtn.Text = "RAPID CARRY ALL"
-CarryBtn.TextColor3 = Color3.new(0, 1, 1)
+CarryBtn.TextColor3 = Color3.new(0,1,1)
 CarryBtn.Font = Enum.Font.GothamBold
 CarryBtn.TextSize = 14
-Instance.new("UICorner", CarryBtn).CornerRadius = UDim.new(0, 8)
 
--- [[ 4. LOGIC ]]
-CarryBtn.MouseButton1Click:Connect(function()
+Instance.new("UICorner", CarryBtn).CornerRadius = UDim.new(0,8)
+
+--// 5. LOGIC
+local function getCarryRemote()
     local replic = ReplicatedStorage:FindFirstChild("CarryReplic")
-    local remote = replic and replic.CarryRemotes:FindFirstChild("CarryRemote")
-    local choice = replic and replic.CarryChoices:FindFirstChild("Piggyback")
+    if not replic then return end
 
-    if remote and choice then
-        CarryBtn.Text = "EXECUTING..."
-        for _, p in pairs(Players:GetPlayers()) do
-            if p ~= LocalPlayer and p.Character then
-                task.spawn(function()
+    local remote = replic:FindFirstChild("CarryRemotes")
+    local choices = replic:FindFirstChild("CarryChoices")
+
+    if not remote or not choices then return end
+
+    return remote:FindFirstChild("CarryRemote"), choices:FindFirstChild("Piggyback")
+end
+
+CarryBtn.MouseButton1Click:Connect(function()
+    local remote, choice = getCarryRemote()
+
+    if not remote or not choice then
+        warn("Carry system not found")
+        return
+    end
+
+    CarryBtn.Text = "EXECUTING..."
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            task.spawn(function()
+                pcall(function()
                     remote:FireServer({
-                        ["cmd"] = "Carry",
-                        ["firstPlr"] = p,
-                        ["carrychoicesss"] = choice
+                        cmd = "Carry",
+                        firstPlr = player,
+                        carrychoicesss = choice
                     })
                 end)
-            end
+            end)
         end
-        task.wait(1)
-        CarryBtn.Text = "RAPID CARRY ALL"
     end
+
+    task.wait(1)
+    CarryBtn.Text = "RAPID CARRY ALL"
 end)
