@@ -1,20 +1,34 @@
--- [[ BARPA HUB SECURITY SYSTEM v1.1 ]]
+-- [[ BARPA HUB SECURITY SYSTEM v1.2 ]]
+-- This script is hosted at: https://raw.githubusercontent.com/jellanberdinardo/luca/main/BARPA%20Hub%20Carry%20all%20player
+
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- RAW GITHUB LINKS
-local whitelistURL = "https://raw.githubusercontent.com/jellanberdinardo/luca/main/whitelist.json"
-local configURL    = "https://raw.githubusercontent.com/jellanberdinardo/luca/main/config.json"
+-- Use os.time() to bypass GitHub's 5-minute cache delay
+local cacheBuster = "?t=" .. os.time()
+local configURL = "https://raw.githubusercontent.com/jellanberdinardo/luca/main/config.json" .. cacheBuster
+local whitelistURL = "https://raw.githubusercontent.com/jellanberdinardo/luca/main/whitelist.json" .. cacheBuster
 
 -- 1. KILL SWITCH CHECK
 local successConfig, configRes = pcall(function() return game:HttpGet(configURL) end)
 if successConfig then
     local config = HttpService:JSONDecode(configRes)
-    if not config.IsActive then
-        warn("[BARPA]: Disabled by Luca_doncicz.")
+    
+    if config.IsActive == false then
+        local reason = config.Reason or "No reason provided."
+        warn("------------------------------------------")
+        warn("[BARPA]: DISABLED BY LUCA_DONCICZ")
+        warn("REASON: " .. reason)
+        warn("------------------------------------------")
+        
+        -- Kicking the player is safer than just 'return'
+        LocalPlayer:Kick("\n[BARPA HUB]\nSystem Offline.\nReason: " .. reason)
         return 
     end
+else
+    warn("[BARPA]: Critical Error. Could not connect to Security Server.")
+    return
 end
 
 -- 2. WHITELIST CHECK
@@ -30,9 +44,10 @@ else
     return
 end
 
--- 3. BRANDING / JOIN MESSAGE
+-- 3. SUCCESS NOTIFICATION
 print("------------------------------------------")
-print("BARPA HUB v1.1 LOADED | OWNER: Luca_doncicz")
+print("BARPA HUB v1.2 LOADED | OWNER: Luca_doncicz")
 print("------------------------------------------")
 
 -- [[ YOUR MAIN CARRY ALL LOGIC GOES BELOW THIS LINE ]]
+print("Executing Main Script...")
