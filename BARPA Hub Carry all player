@@ -1,134 +1,38 @@
--- Load Rayfield UI Library
-local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
-local player = game.Players.LocalPlayer
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
+-- [[ BARPA HUB SECURITY SYSTEM v1.1 ]]
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 
--- Get references to necessary services and objects
-local CarryReplic = ReplicatedStorage:WaitForChild("CarryReplic")
-local CarryRemotes = CarryReplic:WaitForChild("CarryRemotes")
-local CarryRemote = CarryRemotes:WaitForChild("CarryRemote")
-local DropRemote = CarryRemotes:FindFirstChild("DropRemote")  -- Assuming there's a DropRemote for dropping
-local CarryChoices = CarryReplic:WaitForChild("CarryChoices")
-local DEFAULT_CARRY = CarryChoices:FindFirstChildWhichIsA("ModuleScript")
+-- RAW GITHUB LINKS
+local whitelistURL = "https://raw.githubusercontent.com/jellanberdinardo/luca/main/whitelist.json"
+local configURL    = "https://raw.githubusercontent.com/jellanberdinardo/luca/main/config.json"
 
-local carriedPlayers = {}
-
--- ===============================
--- Create Main Window (BARPA HUB)
--- ===============================
-local Window = Rayfield:CreateWindow({
-    Name = "BARPA HUB/Made by Luca the creator of BARPA",  -- Hub title
-    Icon = 0,
-    LoadingTitle = "Gibuhat ning Luca",
-    LoadingSubtitle = "BARPA Hub",  -- Replaced "God Carry" with "Super Carry"
-    ShowText = "BARPA",
-    Theme = "Ocean",
-    ToggleUIKeybind = "N"  -- UI toggle key
-})
-
--- ===============================
--- PLAYER TAB (for carrying players)
--- ===============================
-local PlayerTab = Window:CreateTab("Player", 4483362458)
-
--- ===============================
--- Carry All Button (Carry all players to you)
--- ===============================
-PlayerTab:CreateButton({
-    Name = "Carry All (Everyone carried to you)",
-    Callback = function()
-        -- Clear previous carried players to re-carry them
-        carriedPlayers = {}
-
-        -- Loop through all players and carry them to the local player
-        for _, plr in pairs(game.Players:GetPlayers()) do
-            if plr ~= player then
-                local char = plr.Character or plr.CharacterAdded:Wait()
-                local hrp = char:WaitForChild("HumanoidRootPart", 5)
-                if hrp and not table.find(carriedPlayers, plr) then
-                    table.insert(carriedPlayers, plr)
-                    -- Fire remote to carry the player
-                    pcall(function()
-                        CarryRemote:FireServer({cmd = "Carry", firstPlr = plr, carrychoicesss = DEFAULT_CARRY})
-                    end)
-                end
-            end
-        end
-
-        -- Notify user that all players are carried
-        Rayfield:Notify({
-            Title = "BARPA Hub",
-            Content = "Everyone is now carried!",
-            Duration = 3,
-            Image = 4483362458
-        })
+-- 1. KILL SWITCH CHECK
+local successConfig, configRes = pcall(function() return game:HttpGet(configURL) end)
+if successConfig then
+    local config = HttpService:JSONDecode(configRes)
+    if not config.IsActive then
+        warn("[BARPA]: Disabled by Luca_doncicz.")
+        return 
     end
-})
-
--- ===============================
--- Prevent Drop Action (Disable Drop Remote)
--- ===============================
-if DropRemote then
-    DropRemote.OnClientEvent:Connect(function()
-        -- Display notification that drop is disabled
-        Rayfield:Notify({
-            Title = "BARPA Hub",
-            Content = "Drop is disabled!",
-            Duration = 3,
-            Image = 4483362458
-        })
-        -- Optionally, prevent further processing of the drop event
-        print("Drop attempt blocked.")  -- Debugging print statement
-    end)
-else
-    print("DropRemote not found!")  -- Debugging print if DropRemote doesn't exist
 end
 
--- ===============================
--- Keep Carried Players Locked & Follow You
--- ===============================
-RunService.RenderStepped:Connect(function()
-    if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        local hrp = player.Character.HumanoidRootPart
-        for _, plr in pairs(carriedPlayers) do
-            if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-                plr.Character.HumanoidRootPart.CFrame = hrp.CFrame * CFrame.new(0, 0, -2)
-                -- Fire remote to keep carrying the player
-                pcall(function()
-                    CarryRemote:FireServer({cmd = "Carry", firstPlr = plr, carrychoicesss = DEFAULT_CARRY})
-                end)
-                local carryVal = plr.Character:FindFirstChild("Carryble")
-                if carryVal then
-                    carryVal.Value = true
-                end
-            end
-        end
+-- 2. WHITELIST CHECK
+local successWL, wlRes = pcall(function() return game:HttpGet(whitelistURL) end)
+if successWL then
+    local whitelist = HttpService:JSONDecode(wlRes)
+    if not whitelist[tostring(LocalPlayer.UserId)] then
+        LocalPlayer:Kick("\n[BARPA HUB SECURITY]\nNot Whitelisted!\nYour ID: " .. LocalPlayer.UserId)
+        return
     end
-end)
+else
+    warn("[BARPA]: Security Offline. Could not verify user.")
+    return
+end
 
--- ===============================
--- Listen for Player Respawns (Re-carry players after respawn)
--- ===============================
-game.Players.PlayerAdded:Connect(function(plr)
-    plr.CharacterAdded:Connect(function(character)
-        -- Re-carry player when their character spawns
-        if not table.find(carriedPlayers, plr) then
-            table.insert(carriedPlayers, plr)
-            -- Fire remote to carry the player
-            pcall(function()
-                CarryRemote:FireServer({cmd = "Carry", firstPlr = plr, carrychoicesss = DEFAULT_CARRY})
-            end)
-        end
-    end)
-end)
+-- 3. BRANDING / JOIN MESSAGE
+print("------------------------------------------")
+print("BARPA HUB v1.1 LOADED | OWNER: Luca_doncicz")
+print("------------------------------------------")
 
--- ===============================
--- Initial Notification (Load Complete)
--- ===============================
-Rayfield:Notify({
-    Title = "BARPA Hub",
-    Content = "Made By: Luca (Creator of BARPA RP Hangout)\nSuper Carry Mode Loaded: Everyone follows you like Carry All!",
-    Duration = 5,
-    Image = 4483362458
-})
+-- [[ YOUR MAIN CARRY ALL LOGIC GOES BELOW THIS LINE ]]
