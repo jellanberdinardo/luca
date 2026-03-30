@@ -1,4 +1,4 @@
--- [[ BARPA HUB SECURITY SYSTEM v1.8 ]]
+-- [[ BARPA HUB v2.0 - FULL SYSTEM ]]
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local GroupService = game:GetService("GroupService")
@@ -10,45 +10,81 @@ local GroupId = 35010872
 local cacheBuster = "?t=" .. os.time()
 local configURL = "https://raw.githubusercontent.com/jellanberdinardo/luca/main/config.json" .. cacheBuster
 
--- 1. KILL SWITCH & GROUP CHECK (Security Gate)
+-- 1. KILL SWITCH
 local successConfig, configRes = pcall(function() return game:HttpGet(configURL) end)
 if successConfig then
     local config = HttpService:JSONDecode(configRes)
     if config.IsActive == false then
-        LocalPlayer:Kick("\n[BARPA HUB]\nDisabled by Luca_doncicz.")
+        LocalPlayer:Kick("\n[BARPA HUB]\nDisabled by Luca_doncicz.\nReason: " .. (config.Reason or "None"))
         return 
     end
 end
 
+-- 2. GROUP LOCK
 if not LocalPlayer:IsInGroup(GroupId) then
     pcall(function() GroupService:PromptJoinAsync(GroupId) end)
-    LocalPlayer:Kick("\n[BARPA HUB]\nJoin the group to use this script!")
+    LocalPlayer:Kick("\n[BARPA HUB]\nJoin the group to use this script!\nGroup ID: " .. GroupId)
     return
 end
 
--- 2. LOG SUCCESS
+-- 3. DISCORD LOG
 local function logExec()
     local proxyURL = webhookURL:gsub("discord.com", "webhook.lewisakura.moe")
     pcall(function()
         HttpService:PostAsync(proxyURL, HttpService:JSONEncode({
-            ["embeds"] = {{["title"] = "BARPA HUB LOADED", ["description"] = LocalPlayer.Name .. " is using the script!", ["color"] = 65280}}
+            ["embeds"] = {{
+                ["title"] = "BARPA HUB LOADED", 
+                ["description"] = "**User:** " .. LocalPlayer.Name .. "\n**Status:** SUCCESS", 
+                ["color"] = 65280
+            }}
         }))
     end)
 end
-logExec()
+task.spawn(logExec)
 
--- ==========================================
--- [[ PASTE YOUR CARRY ALL GUI CODE BELOW ]]
--- ==========================================
+-- 4. THE GUI (This is the part that was missing!)
+local ScreenGui = Instance.new("ScreenGui")
+local MainFrame = Instance.new("Frame")
+local Title = Instance.new("TextLabel")
+local CarryButton = Instance.new("TextButton")
+local UICorner = Instance.new("UICorner")
 
--- EXAMPLE (Delete this and paste YOUR actual GUI code here):
-local sg = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
-local frame = Instance.new("Frame", sg)
-frame.Size = UDim2.new(0, 200, 0, 100)
-frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-local text = Instance.new("TextLabel", frame)
-text.Text = "BARPA HUB ACTIVE"
-text.Size = UDim2.new(1, 0, 1, 0)
-text.TextColor3 = Color3.new(1, 1, 1)
+ScreenGui.Name = "BARPA_GUI"
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
 
--- ==========================================
+MainFrame.Name = "MainFrame"
+MainFrame.Parent = ScreenGui
+MainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+MainFrame.Position = UDim2.new(0.5, -100, 0.4, 0)
+MainFrame.Size = UDim2.new(0, 200, 0, 120)
+MainFrame.Active = true
+MainFrame.Draggable = true -- You can move it!
+
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
+
+Title.Parent = MainFrame
+Title.Size = UDim2.new(1, 0, 0, 35)
+Title.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+Title.Text = "BARPA HUB v2.0"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.TextSize = 14
+Instance.new("UICorner", Title).CornerRadius = UDim.new(0, 8)
+
+CarryButton.Parent = MainFrame
+CarryButton.Position = UDim2.new(0.1, 0, 0.45, 0)
+CarryButton.Size = UDim2.new(0.8, 0, 0, 45)
+CarryButton.BackgroundColor3 = Color3.fromRGB(0, 170, 100)
+CarryButton.Text = "CARRY ALL"
+CarryButton.TextColor3 = Color3.new(1, 1, 1)
+CarryButton.TextSize = 18
+Instance.new("UICorner", CarryButton).CornerRadius = UDim.new(0, 6)
+
+-- 5. CARRY LOGIC
+CarryButton.MouseButton1Click:Connect(function()
+    print("Carry All triggered by " .. LocalPlayer.Name)
+    -- Put your specific game carry code here!
+    -- Example: game:GetService("ReplicatedStorage").CarryEvent:FireServer("All")
+end)
+
+warn("BARPA HUB: Successfully Loaded GUI.")
