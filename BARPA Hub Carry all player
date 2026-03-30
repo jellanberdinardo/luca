@@ -1,48 +1,52 @@
--- [[ BARPA HUB v8.4 - CACHE FIX ]]
+-- [[ BARPA HUB v8.5 - INSTANT SYNC ]]
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local GroupService = game:GetService("GroupService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
--- [[ 1. THE KILL SWITCH (STRICT CHECK) ]]
+-- [[ 1. THE KILL SWITCH (DOUBLE-CHECK SYSTEM) ]]
 local GroupId = 35010872 
--- cacheBuster forces GitHub to send the NEWEST version of your file instantly
-local cacheBuster = "?t=" .. math.random(1, 999999) 
-local configURL = "https://raw.githubusercontent.com/jellanberdinardo/luca/main/config.json" .. cacheBuster
+local configURL = "https://raw.githubusercontent.com/jellanberdinardo/luca/main/config.json"
 
-local function runSecurityCheck()
-    local success, configRes = pcall(function() 
-        return game:HttpGet(configURL) 
-    end)
-    
+local function getSettings()
+    -- Adding math.random AND os.time to stay ahead of the cache
+    local finalURL = configURL .. "?t=" .. os.time() .. "&r=" .. math.random(1,100000)
+    local success, res = pcall(function() return game:HttpGet(finalURL) end)
     if success then
-        local config = HttpService:JSONDecode(configRes)
-        -- If it's false, we KICK and STOP the entire script here
+        return HttpService:JSONDecode(res)
+    end
+    return nil
+end
+
+local function runSecurity()
+    local config = getSettings()
+    
+    if config then
+        -- If it says false, kick immediately
         if config.IsActive == false or config.IsActive == "false" then
             LocalPlayer:Kick("\n[BARPA HUB]\n" .. (config.Reason or "Disabled by Luca_doncicz."))
             return false
         end
     end
     
-    -- [[ 2. GROUP LOCK ]]
+    -- Group Check
     if not LocalPlayer:IsInGroup(GroupId) then
         pcall(function() GroupService:PromptJoinAsync(GroupId) end)
-        LocalPlayer:Kick("\n[BARPA HUB]\nPlease join the group to use this script!")
+        LocalPlayer:Kick("\n[BARPA HUB]\nJoin the group to use this script!")
         return false
     end
     
     return true
 end
 
--- START SECURITY
-if not runSecurityCheck() then 
-    return -- This stops the rest of the code from ever running
-end
+-- Wait 1 second to let GitHub's cache breathe, then check
+task.wait(1) 
+if not runSecurity() then return end
 
--- [[ 3. THE GUI (Only loads if security passes) ]]
+-- [[ 2. THE GUI (Only loads if security passes) ]]
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-ScreenGui.Name = "BARPA_ULTRA_STABLE"
+ScreenGui.Name = "BARPA_V8_5"
 ScreenGui.ResetOnSpawn = false
 
 local Main = Instance.new("Frame", ScreenGui)
@@ -62,7 +66,7 @@ Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 12)
 local Title = Instance.new("TextLabel", TopBar)
 Title.Size = UDim2.new(1, 0, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
-Title.Text = "BARPA HUB <font color='#00FFFF'>v8.4</font>"
+Title.Text = "BARPA HUB <font color='#00FFFF'>v8.5</font>"
 Title.RichText = true
 Title.TextColor3 = Color3.new(1, 1, 1)
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -80,14 +84,14 @@ CarryBtn.Font = Enum.Font.GothamBold
 CarryBtn.TextSize = 15
 Instance.new("UICorner", CarryBtn).CornerRadius = UDim.new(0, 8)
 
--- [[ 4. RAPID LOGIC ]]
+-- [[ 3. RAPID LOGIC ]]
 CarryBtn.MouseButton1Click:Connect(function()
     local replic = ReplicatedStorage:FindFirstChild("CarryReplic")
     local remote = replic and replic.CarryRemotes:FindFirstChild("CarryRemote")
     local choice = replic and replic.CarryChoices:FindFirstChild("Piggyback")
 
     if remote and choice then
-        CarryBtn.Text = "SYNCING SERVER..."
+        CarryBtn.Text = "CARRYING..."
         for _, p in pairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character then
                 task.spawn(function()
