@@ -1,5 +1,5 @@
 {
-  "IsActive": false,
-  "Version": "1.1",
-  "Message": "BARPA Hub is Online!"
+  "IsActive": true,
+  "Reason": "System is currently active.",
+  "Version": "1.2"
 }
