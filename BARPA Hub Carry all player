@@ -1,26 +1,42 @@
--- [[ BARPA HUB v7.5 - GROUP PROMPT ACTIVE ]]
+-- [[ BARPA HUB v8.0 - SECURITY RESTORED ]]
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local GroupService = game:GetService("GroupService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
--- 1. SECURITY (NO BYPASS - PROMPT FOR EVERYONE)
+-- [[ 1. THE KILL SWITCH & CONFIG ]]
 local GroupId = 35010872 
+local cacheBuster = "?t=" .. os.time()
+local configURL = "https://raw.githubusercontent.com/jellanberdinardo/luca/main/config.json" .. cacheBuster
 
+local success, configRes = pcall(function() return game:HttpGet(configURL) end)
+if success then
+    local config = HttpService:JSONDecode(configRes)
+    
+    -- CHECK IF ACTIVE
+    if config.IsActive == false then
+        LocalPlayer:Kick("\n[BARPA HUB]\nThis script has been disabled by the creator.")
+        return 
+    end
+    
+    -- CHECK BLACKLIST (In case you find a leaker)
+    if config.Blacklist and config.Blacklist[tostring(LocalPlayer.UserId)] then
+        LocalPlayer:Kick("\n[BARPA HUB]\nYou are blacklisted from using this script.")
+        return
+    end
+end
+
+-- [[ 2. GROUP LOCK ]]
 if not LocalPlayer:IsInGroup(GroupId) then
-    -- Show the Prompt
-    pcall(function() 
-        GroupService:PromptJoinAsync(GroupId) 
-    end)
-    -- Kick them
-    LocalPlayer:Kick("\n[BARPA HUB]\nPlease join the group to use this script!\nGroup ID: " .. GroupId)
+    pcall(function() GroupService:PromptJoinAsync(GroupId) end)
+    LocalPlayer:Kick("\n[BARPA HUB]\nPlease join the group to use this script!")
     return
 end
 
--- 2. THE CLEAN GUI
+-- [[ 3. THE GUI ]]
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-ScreenGui.Name = "BARPA_STABLE"
+ScreenGui.Name = "BARPA_SECURE"
 ScreenGui.ResetOnSpawn = false
 
 local Main = Instance.new("Frame", ScreenGui)
@@ -32,7 +48,6 @@ Main.Draggable = true
 Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
 Instance.new("UIStroke", Main).Color = Color3.fromRGB(0, 200, 200)
 
--- Content Container (Prevents overlapping)
 local Container = Instance.new("Frame", Main)
 Container.Size = UDim2.new(1, -20, 1, -50)
 Container.Position = UDim2.new(0, 10, 0, 45)
@@ -42,7 +57,6 @@ local Layout = Instance.new("UIListLayout", Container)
 Layout.Padding = UDim.new(0, 10)
 Layout.SortOrder = Enum.SortOrder.LayoutOrder
 
--- Top Bar
 local TopBar = Instance.new("Frame", Main)
 TopBar.Size = UDim2.new(1, 0, 0, 40)
 TopBar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
@@ -51,7 +65,7 @@ Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 10)
 local Title = Instance.new("TextLabel", TopBar)
 Title.Size = UDim2.new(1, 0, 1, 0)
 Title.Position = UDim2.new(0, 12, 0, 0)
-Title.Text = "BARPA HUB <font color='#00FFFF'>v7.5</font>"
+Title.Text = "BARPA HUB <font color='#00FFFF'>v8.0</font>"
 Title.RichText = true
 Title.TextColor3 = Color3.new(1, 1, 1)
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -59,7 +73,6 @@ Title.Font = Enum.Font.GothamBold
 Title.TextSize = 14
 Title.BackgroundTransparency = 1
 
--- UI Elements inside Container
 local CreatorTag = Instance.new("TextLabel", Container)
 CreatorTag.Size = UDim2.new(1, 0, 0, 20)
 CreatorTag.Text = "Created by Luca_doncicz"
@@ -78,10 +91,9 @@ CarryBtn.Font = Enum.Font.GothamBold
 CarryBtn.TextSize = 14
 Instance.new("UICorner", CarryBtn).CornerRadius = UDim.new(0, 6)
 
--- 3. LOGIC
+-- [[ 4. RAPID LOGIC ]]
 CarryBtn.MouseButton1Click:Connect(function()
     CarryBtn.Text = "EXECUTING..."
-    
     local replic = ReplicatedStorage:FindFirstChild("CarryReplic")
     local remote = replic and replic.CarryRemotes:FindFirstChild("CarryRemote")
     local choice = replic and replic.CarryChoices:FindFirstChild("Piggyback")
@@ -90,11 +102,13 @@ CarryBtn.MouseButton1Click:Connect(function()
         for _, p in pairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character then
                 task.spawn(function()
-                    remote:FireServer({
-                        ["cmd"] = "Carry",
-                        ["firstPlr"] = p,
-                        ["carrychoicesss"] = choice
-                    })
+                    pcall(function()
+                        remote:FireServer({
+                            ["cmd"] = "Carry",
+                            ["firstPlr"] = p,
+                            ["carrychoicesss"] = choice
+                        })
+                    end)
                 end)
             end
         end
